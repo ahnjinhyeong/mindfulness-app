@@ -1266,57 +1266,41 @@
 
             // 배경음
             createAudioElements() {
-                // 실제 환경에서는 로컬 오디오 파일이나 안정적인 CDN 사용
-                // 여기서는 Web Audio API로 간단한 화이트 노이즈 생성
-                this.audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                this.soundNodes = {};
+                // 실제 MP3 파일 사용
+                this.audioElements = {
+                    rain: new Audio('rain.mp3'),
+                    ocean: new Audio('ocean.mp3'),
+                    forest: new Audio('forest.mp3'),
+                    fire: new Audio('fire.mp3'),
+                    wind: new Audio('wind.mp3'),
+                    birds: new Audio('birds.mp3')
+                };
+
+                // 모든 오디오를 루프로 설정
+                Object.values(this.audioElements).forEach(audio => {
+                    audio.loop = true;
+                    audio.volume = this.volume;
+                });
             }
 
             toggleSound(soundType) {
                 const btn = event.target.closest('.sound-btn');
+                const audio = this.audioElements[soundType];
+                
+                if (!audio) return;
                 
                 if (this.activeSounds.has(soundType)) {
                     this.activeSounds.delete(soundType);
                     btn.classList.remove('active');
-                    this.stopSound(soundType);
+                    audio.pause();
+                    audio.currentTime = 0;
                 } else {
                     this.activeSounds.add(soundType);
                     btn.classList.add('active');
-                    this.playSound(soundType);
-                }
-            }
-
-            playSound(soundType) {
-                // Web Audio API로 간단한 화이트노이즈/브라운노이즈 생성
-                const bufferSize = 4096;
-                const whiteNoise = this.audioContext.createScriptProcessor(bufferSize, 1, 1);
-                
-                whiteNoise.onaudioprocess = (e) => {
-                    const output = e.outputBuffer.getChannelData(0);
-                    for (let i = 0; i < bufferSize; i++) {
-                        // 소리 타입별로 다른 패턴 생성
-                        if (soundType === 'rain' || soundType === 'ocean') {
-                            output[i] = (Math.random() * 2 - 1) * 0.3; // 화이트 노이즈
-                        } else {
-                            output[i] = (Math.random() * 2 - 1) * 0.1; // 부드러운 노이즈
-                        }
-                    }
-                };
-
-                const gainNode = this.audioContext.createGain();
-                gainNode.gain.value = this.volume;
-                
-                whiteNoise.connect(gainNode);
-                gainNode.connect(this.audioContext.destination);
-                
-                this.soundNodes[soundType] = { whiteNoise, gainNode };
-            }
-
-            stopSound(soundType) {
-                if (this.soundNodes[soundType]) {
-                    this.soundNodes[soundType].whiteNoise.disconnect();
-                    this.soundNodes[soundType].gainNode.disconnect();
-                    delete this.soundNodes[soundType];
+                    audio.play().catch(err => {
+                        console.log('Audio play failed:', err);
+                        alert('오디오 재생에 실패했습니다. 페이지를 새로고침해주세요.');
+                    });
                 }
             }
 
@@ -1324,9 +1308,9 @@
                 this.volume = value / 100;
                 document.getElementById('volumeDisplay').textContent = value;
                 
-                // 재생 중인 모든 소리의 볼륨 업데이트
-                Object.values(this.soundNodes).forEach(node => {
-                    node.gainNode.gain.value = this.volume;
+                // 모든 오디오 볼륨 업데이트
+                Object.values(this.audioElements).forEach(audio => {
+                    audio.volume = this.volume;
                 });
             }
 
